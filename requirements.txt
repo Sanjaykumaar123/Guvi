@@ -1,0 +1,18 @@
+# FastAPI - Modern web framework for building APIs
+fastapi
+
+# Uvicorn - ASGI server for running FastAPI
+uvicorn
+
+# Pydantic - Data validation (will auto-install compatible version)
+pydantic
+
+# Python-multipart - Required for form data handling
+python-multipart
+
+# Optional: If you want to add actual ML model support later
+# torch
+# torchaudio
+# librosa
+# numpy
+# scikit-learn
