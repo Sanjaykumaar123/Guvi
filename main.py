@@ -37,11 +37,16 @@ SUPPORTED_FORMATS = ["mp3", "wav", "ogg", "flac", "m4a"]
 class AudioRequest(BaseModel):
     """
     Request model for audio prediction
-    All fields are required as per GUVI specifications
+    All fields are required as per GUVI specifications.
+    Supports both snake_case (audio_format) and camelCase (audioFormat).
     """
     language: str = Field(..., description="Language code (e.g., 'en', 'hi', 'ta')")
-    audio_format: str = Field(..., description="Audio format (mp3, wav, etc.)")
-    audio_base64: str = Field(..., description="Base64-encoded audio data")
+    audio_format: str = Field(..., alias="audioFormat", description="Audio format (mp3, wav, etc.)")
+    audio_base64: str = Field(..., alias="audioBase64", description="Base64-encoded audio data")
+
+    model_config = {
+        "populate_by_name": True
+    }
 
     @field_validator('audio_format')
     @classmethod
