@@ -286,13 +286,18 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Use the PORT environment variable provided by Render/Railway
+    # Default to 8000 if running locally
+    port = int(os.environ.get("PORT", 8000))
     
     # Run the server
-    # Host 0.0.0.0 makes it accessible from outside the container
-    # Port 8000 is standard for FastAPI and works with most cloud platforms
+    # host 0.0.0.0 is required for deployment
+    # reload=False is recommended for production (it's much more stable)
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True  # Auto-reload on code changes (disable in production)
+        port=port,
+        reload=False
     )
