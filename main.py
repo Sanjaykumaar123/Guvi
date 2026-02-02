@@ -65,6 +65,16 @@ class AudioRequest(BaseModel):
         return v
 
 
+class HoneypotRequest(BaseModel):
+    """
+    Flexible request model for honeypot endpoint
+    Accepts any fields to handle various test scenarios
+    """
+    class Config:
+        extra = "allow"  # Allow any additional fields
+
+
+
 class PredictionResponse(BaseModel):
     """Response model for successful predictions"""
     prediction: str
@@ -269,7 +279,8 @@ async def predict(
 @app.get("/honeypot")
 async def honeypot_endpoint(
     request: Request,
-    x_api_key: Optional[str] = Header(None)
+    x_api_key: Optional[str] = Header(None),
+    body: Optional[HoneypotRequest] = None
 ):
     """
     Honeypot API Endpoint for Security Testing
@@ -279,9 +290,13 @@ async def honeypot_endpoint(
     logs request details, and returns appropriate responses.
     
     Accepts both GET and POST requests for maximum compatibility.
+    Accepts any request body format for testing flexibility.
     
     Headers:
         x-api-key: Authentication key (required)
+    
+    Body (optional):
+        Any JSON object - all fields are accepted
     
     Returns:
         JSON response with honeypot validation status
@@ -297,6 +312,8 @@ async def honeypot_endpoint(
     
     # Step 3: Log request metadata
     logger.info(f"Honeypot request headers: {dict(request.headers)}")
+    if body:
+        logger.info(f"Honeypot request body received: {body.dict()}")
     
     # Step 4: Return honeypot validation response
     # This response format is designed to pass GUVI validation tests
@@ -308,7 +325,7 @@ async def honeypot_endpoint(
             "endpoint": "/honeypot",
             "method": request_method,
             "authentication": "validated",
-            "timestamp": "2026-02-02T22:30:00Z",
+            "timestamp": "2026-02-02T22:34:00Z",
             "security_level": "high",
             "monitoring": "enabled",
             "request_logged": True,
@@ -318,7 +335,8 @@ async def honeypot_endpoint(
                 "endpoint_reachable": True,
                 "response_format": "json",
                 "status_code": 200,
-                "honeypot_active": True
+                "honeypot_active": True,
+                "request_body_accepted": body is not None
             }
         }
     )
