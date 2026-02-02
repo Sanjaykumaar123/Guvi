@@ -275,40 +275,30 @@ async def predict(
                 logger.warning(f"Could not delete temporary file: {str(e)}")
 
 
-@app.get("/honeypot")
-async def honeypot(x_api_key: Optional[str] = Header(None)):
-    # Auth check
-    if x_api_key != "guvi123":
-        raise HTTPException(
+@app.api_route("/honeypot", methods=["POST", "GET"])
+async def honeypot_raw(request: Request):
+    # Read header manually
+    api_key = request.headers.get("x-api-key")
+
+    if api_key != "guvi123":
+        return JSONResponse(
             status_code=401,
-            detail="Unauthorized"
+            content={"error": "Unauthorized"}
         )
 
-    # IMPORTANT: No body parsing, no validation
-    return {
-        "status": "success",
-        "service": "agentic-honeypot",
-        "message": "Honeypot endpoint active",
-        "threat_detected": False
-    }
+    # DO NOT read request.body()
+    # DO NOT parse JSON
+    # DO NOT validate anything
 
-@app.post("/honeypot")
-async def honeypot_post(request: Request, x_api_key: Optional[str] = Header(None)):
-    # Auth check
-    if x_api_key != "guvi123":
-        # Keep consistent error response
-        raise HTTPException(
-            status_code=401,
-            detail="Unauthorized"
-        )
-
-    # CRITICAL: Do NOT read or validate body
-    return {
-        "status": "success",
-        "service": "agentic-honeypot",
-        "message": "Honeypot endpoint active",
-        "threat_detected": False
-    }
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "service": "agentic-honeypot",
+            "message": "Honeypot endpoint active",
+            "threat_detected": False
+        }
+    )
 
 
 @app.exception_handler(HTTPException)
