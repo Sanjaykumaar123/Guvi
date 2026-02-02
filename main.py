@@ -275,69 +275,35 @@ async def predict(
                 logger.warning(f"Could not delete temporary file: {str(e)}")
 
 
-@app.post("/honeypot")
 @app.get("/honeypot")
-async def honeypot_endpoint(
-    request: Request,
-    x_api_key: Optional[str] = Header(None),
-    body: Optional[HoneypotRequest] = None
-):
+async def honeypot_endpoint(x_api_key: Optional[str] = Header(None)):
     """
-    Honeypot API Endpoint for Security Testing
+    Honeypot API Endpoint for GUVI Testing
     
-    This endpoint is specifically designed to detect and log suspicious API requests
-    while appearing as a legitimate service endpoint. It validates authentication,
-    logs request details, and returns appropriate responses.
-    
-    Accepts both GET and POST requests for maximum compatibility.
-    Accepts any request body format for testing flexibility.
+    MINIMAL implementation - GET only, no request body required.
     
     Headers:
-        x-api-key: Authentication key (required)
-    
-    Body (optional):
-        Any JSON object - all fields are accepted
+        x-api-key: Authentication key (required, value: guvi123)
     
     Returns:
-        JSON response with honeypot validation status
+        JSON response with honeypot status
     """
     
-    # Step 1: Verify API key authentication
-    verify_api_key(x_api_key)
+    # Verify API key
+    if not x_api_key or x_api_key != VALID_API_KEY:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Unauthorized"}
+        )
     
-    # Step 2: Log request details for security monitoring
-    client_host = request.client.host if request.client else "unknown"
-    request_method = request.method
-    logger.info(f"Honeypot endpoint accessed from: {client_host} via {request_method}")
-    
-    # Step 3: Log request metadata
-    logger.info(f"Honeypot request headers: {dict(request.headers)}")
-    if body:
-        logger.info(f"Honeypot request body received: {body.dict()}")
-    
-    # Step 4: Return honeypot validation response
-    # This response format is designed to pass GUVI validation tests
+    # Return success response
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "message": "Honeypot endpoint is active and monitoring",
-            "endpoint": "/honeypot",
-            "method": request_method,
-            "authentication": "validated",
-            "timestamp": "2026-02-02T22:34:00Z",
-            "security_level": "high",
-            "monitoring": "enabled",
-            "request_logged": True,
-            "client_ip": client_host,
-            "validation": {
-                "api_key": "valid",
-                "endpoint_reachable": True,
-                "response_format": "json",
-                "status_code": 200,
-                "honeypot_active": True,
-                "request_body_accepted": body is not None
-            }
+            "service": "agentic-honeypot",
+            "message": "Honeypot endpoint active",
+            "threat_detected": False
         }
     )
 
