@@ -50,11 +50,17 @@ async def universal_honeypot(request):
         content=intelligence_report
     )
 
-# Universal Catch-All Route
-# This matches /honeypot AND anything else, ensuring we never miss a hit.
+async def health_check(request):
+    """
+    Open Health Check endpoint (No Auth)
+    Required for Render and connectivity checks.
+    """
+    return JSONResponse({"status": "healthy", "service": "agentic-honeypot"})
+
+# Route definitions
 routes = [
-    Route("/honeypot", universal_honeypot, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]),
-    Route("/", universal_honeypot, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]), # Catch root too
+    Route("/", health_check, methods=["GET", "HEAD"]),  # Open root for health checks
+    Route("/honeypot", universal_honeypot, methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]), # Protected Honeypot
 ]
 
 app = Starlette(debug=False, routes=routes)
