@@ -275,28 +275,29 @@ async def predict(
                 logger.warning(f"Could not delete temporary file: {str(e)}")
 
 
-@app.get("/honeypot")
-async def honeypot_endpoint(x_api_key: Optional[str] = Header(None)):
+@app.api_route("/honeypot", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
+async def honeypot_endpoint(request: Request):
     """
-    Honeypot API Endpoint for GUVI Testing
-    
-    MINIMAL implementation - GET only, no request body required.
-    
-    Headers:
-        x-api-key: Authentication key (required, value: guvi123)
-    
-    Returns:
-        JSON response with honeypot status
+    Universal Honeypot Endpoint
+    Accepts ANY method and ANY body.
     """
+    # Manual Header Check (Safest way to avoid 422 errors)
+    x_api_key = request.headers.get("x-api-key")
     
-    # Verify API key
-    if not x_api_key or x_api_key != VALID_API_KEY:
+    # Valid API Key check
+    if not x_api_key or x_api_key != "guvi123":
         return JSONResponse(
             status_code=401,
             content={"error": "Unauthorized"}
         )
     
-    # Return success response
+    # Consume body to ensure no stream errors (but ignore content)
+    try:
+        _ = await request.body()
+    except:
+        pass
+
+    # Return required Success JSON
     return JSONResponse(
         status_code=200,
         content={
