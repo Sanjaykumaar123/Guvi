@@ -292,6 +292,24 @@ async def honeypot(x_api_key: Optional[str] = Header(None)):
         "threat_detected": False
     }
 
+@app.post("/honeypot")
+async def honeypot_post(request: Request, x_api_key: Optional[str] = Header(None)):
+    # Auth check
+    if x_api_key != "guvi123":
+        # Keep consistent error response
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized"
+        )
+
+    # CRITICAL: Do NOT read or validate body
+    return {
+        "status": "success",
+        "service": "agentic-honeypot",
+        "message": "Honeypot endpoint active",
+        "threat_detected": False
+    }
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
