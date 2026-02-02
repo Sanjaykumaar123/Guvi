@@ -265,6 +265,65 @@ async def predict(
                 logger.warning(f"Could not delete temporary file: {str(e)}")
 
 
+@app.post("/honeypot")
+async def honeypot_endpoint(
+    request: Request,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Honeypot API Endpoint for Security Testing
+    
+    This endpoint is specifically designed to detect and log suspicious API requests
+    while appearing as a legitimate service endpoint. It validates authentication,
+    logs request details, and returns appropriate responses.
+    
+    Headers:
+        x-api-key: Authentication key (required)
+    
+    Returns:
+        JSON response with honeypot validation status
+    """
+    
+    # Step 1: Verify API key authentication
+    verify_api_key(x_api_key)
+    
+    # Step 2: Log request details for security monitoring
+    client_host = request.client.host if request.client else "unknown"
+    logger.info(f"Honeypot endpoint accessed from: {client_host}")
+    
+    # Step 3: Get request body if present
+    try:
+        body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    except:
+        body = {}
+    
+    # Step 4: Log request metadata
+    logger.info(f"Honeypot request headers: {dict(request.headers)}")
+    logger.info(f"Honeypot request body keys: {list(body.keys())}")
+    
+    # Step 5: Return honeypot validation response
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Honeypot endpoint is active and monitoring",
+            "endpoint": "/honeypot",
+            "authentication": "validated",
+            "timestamp": "2026-02-02T22:20:00Z",
+            "security_level": "high",
+            "monitoring": "enabled",
+            "request_logged": True,
+            "client_ip": client_host,
+            "validation": {
+                "api_key": "valid",
+                "endpoint_reachable": True,
+                "response_format": "json",
+                "status_code": 200
+            }
+        }
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """
