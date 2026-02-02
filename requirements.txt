@@ -1,2 +1,2 @@
-fastapi
+starlette
 uvicorn
