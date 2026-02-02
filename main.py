@@ -291,15 +291,24 @@ async def honeypot_endpoint(
     client_host = request.client.host if request.client else "unknown"
     logger.info(f"Honeypot endpoint accessed from: {client_host}")
     
-    # Step 3: Get request body if present
+    # Step 3: Safely get request body if present (handle any format)
+    body = {}
+    body_raw = None
     try:
-        body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+        body_raw = await request.body()
+        if body_raw:
+            try:
+                body = await request.json()
+            except:
+                # If not JSON, just log the raw body
+                logger.info(f"Non-JSON body received: {body_raw[:100]}")
     except:
-        body = {}
+        pass
     
     # Step 4: Log request metadata
     logger.info(f"Honeypot request headers: {dict(request.headers)}")
-    logger.info(f"Honeypot request body keys: {list(body.keys())}")
+    if body:
+        logger.info(f"Honeypot request body keys: {list(body.keys())}")
     
     # Step 5: Return honeypot validation response
     return JSONResponse(
@@ -309,7 +318,7 @@ async def honeypot_endpoint(
             "message": "Honeypot endpoint is active and monitoring",
             "endpoint": "/honeypot",
             "authentication": "validated",
-            "timestamp": "2026-02-02T22:20:00Z",
+            "timestamp": "2026-02-02T22:27:00Z",
             "security_level": "high",
             "monitoring": "enabled",
             "request_logged": True,
