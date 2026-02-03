@@ -1,0 +1,26 @@
+services:
+  # Voice Detection API
+  - type: web
+    name: guvi-voice-api
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    rootDir: voice-api
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+
+  # Honeypot API
+  - type: web
+    name: guvi-honeypot-api
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    rootDir: honeypot-api
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
