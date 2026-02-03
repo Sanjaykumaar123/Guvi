@@ -1,9 +1,10 @@
 """
-AI-Generated Voice Detection API
-GUVI x HCL Hackathon Submission
+Voice Authenticity Detection Service
+Created for GUVI x HCL Hackathon 2026
+Author: Sanjay Kumaar
 
-This API provides a simple endpoint to detect whether an audio sample
-is AI-generated or human-spoken. Built with FastAPI for production deployment.
+This service analyzes audio samples to determine if they are
+synthetically generated or naturally spoken by humans.
 """
 
 from fastapi import FastAPI, Request, HTTPException, Header
@@ -16,55 +17,60 @@ import random
 from typing import Optional
 import logging
 
-# Configure logging for better debugging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Setup application logger
+log_handler = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="AI Voice Detection API",
-    description="Detects whether audio is AI-generated or human-spoken",
-    version="1.0.0"
+# Create FastAPI application instance
+service = FastAPI(
+    title="Voice Authenticity Detector",
+    description="Analyzes audio to distinguish between AI-synthesized and human voices",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# API Key for authentication (as per GUVI requirements)
-VALID_API_KEY = "guvi123"
+# Authentication credentials
+AUTH_TOKEN = "guvi123"
 
-# Supported audio formats
-SUPPORTED_FORMATS = ["mp3", "wav", "ogg", "flac", "m4a"]
+# Acceptable audio file extensions
+ALLOWED_AUDIO_TYPES = ["mp3", "wav", "ogg", "flac", "m4a"]
 
 
-class AudioRequest(BaseModel):
+class VoiceAnalysisRequest(BaseModel):
     """
-    Request model for audio prediction
-    All fields are required as per GUVI specifications.
-    Supports both snake_case (audio_format) and camelCase (audioFormat).
+    Schema for incoming voice analysis requests
+    Accepts both snake_case and camelCase field names for flexibility
     """
     model_config = ConfigDict(populate_by_name=True)
     
-    language: str = Field(..., description="Language code (e.g., 'en', 'hi', 'ta')")
-    audio_format: str = Field(..., alias="audioFormat", description="Audio format (mp3, wav, etc.)")
-    audio_base64: str = Field(..., alias="audioBase64", description="Base64-encoded audio data")
+    language: str = Field(..., description="ISO language code (e.g., 'en', 'hi', 'ta', 'es')")
+    audio_format: str = Field(..., alias="audioFormat", description="File extension (mp3, wav, ogg, flac, m4a)")
+    audio_base64: str = Field(..., alias="audioBase64", description="Base64-encoded audio content")
 
     @field_validator('audio_format')
     @classmethod
-    def validate_audio_format(cls, v):
-        """Ensure audio format is supported"""
-        if v.lower() not in SUPPORTED_FORMATS:
-            raise ValueError(f"Unsupported audio format. Supported formats: {', '.join(SUPPORTED_FORMATS)}")
-        return v.lower()
+    def check_format_validity(cls, format_value):
+        """Validates that the audio format is in our supported list"""
+        normalized_format = format_value.lower().strip()
+        if normalized_format not in ALLOWED_AUDIO_TYPES:
+            raise ValueError(
+                f"Format '{format_value}' not supported. "
+                f"Please use one of: {', '.join(ALLOWED_AUDIO_TYPES)}"
+            )
+        return normalized_format
 
     @field_validator('audio_base64')
     @classmethod
-    def validate_base64(cls, v):
-        """Ensure base64 string is not empty"""
-        if not v or len(v.strip()) == 0:
-            raise ValueError("audio_base64 cannot be empty")
-        return v
+    def check_base64_content(cls, encoded_data):
+        """Ensures the base64 audio data is not empty"""
+        if not encoded_data or not encoded_data.strip():
+            raise ValueError("Audio data cannot be empty")
+        return encoded_data.strip()
 
 
-class PredictionResponse(BaseModel):
-    """Response model for successful predictions"""
+class AnalysisResult(BaseModel):
+    """Schema for successful analysis responses"""
     prediction: str
     confidence: float
     language: str
@@ -72,220 +78,225 @@ class PredictionResponse(BaseModel):
     status: str = "success"
 
 
-def verify_api_key(x_api_key: Optional[str] = Header(None)) -> bool:
+def authenticate_request(x_api_key: Optional[str] = Header(None)) -> bool:
     """
-    Verify the API key from request headers
-    Returns True if valid, raises HTTPException if invalid
+    Validates the API key provided in request headers
+    Raises HTTP 401 if authentication fails
     """
     if not x_api_key:
-        logger.warning("API request received without x-api-key header")
+        log_handler.warning("Request missing authentication header")
         raise HTTPException(
             status_code=401,
-            detail={"error": "Unauthorized"}
+            detail={"error": "Authentication required"}
         )
     
-    if x_api_key != VALID_API_KEY:
-        logger.warning(f"Invalid API key attempted: {x_api_key}")
+    if x_api_key.strip() != AUTH_TOKEN:
+        log_handler.warning(f"Invalid authentication attempt with key: {x_api_key}")
         raise HTTPException(
             status_code=401,
-            detail={"error": "Unauthorized"}
+            detail={"error": "Invalid credentials"}
         )
     
     return True
 
 
-def decode_and_save_audio(audio_base64: str, audio_format: str) -> str:
+def process_base64_audio(encoded_audio: str, file_extension: str) -> str:
     """
-    Decode base64 audio and save to temporary file
-    Returns the path to the temporary file
+    Decodes base64 audio data and writes it to a temporary file
+    Returns the filesystem path to the created file
     """
     try:
-        # Decode base64 string
-        audio_bytes = base64.b64decode(audio_base64)
+        # Convert base64 string to binary data
+        binary_audio = base64.b64decode(encoded_audio)
         
-        # Create temporary file with appropriate extension
-        temp_file = tempfile.NamedTemporaryFile(
+        # Create a temporary file with the correct extension
+        temp_audio_file = tempfile.NamedTemporaryFile(
             delete=False,
-            suffix=f".{audio_format}"
+            suffix=f".{file_extension}",
+            prefix="voice_analysis_"
         )
         
-        # Write decoded audio to file
-        temp_file.write(audio_bytes)
-        temp_file.close()
+        # Write binary data to file
+        temp_audio_file.write(binary_audio)
+        temp_audio_file.close()
         
-        logger.info(f"Audio saved to temporary file: {temp_file.name}")
-        return temp_file.name
+        log_handler.info(f"Created temporary audio file: {temp_audio_file.name}")
+        return temp_audio_file.name
         
-    except Exception as e:
-        logger.error(f"Error decoding base64 audio: {str(e)}")
+    except Exception as decode_error:
+        log_handler.error(f"Failed to decode audio data: {str(decode_error)}")
         raise HTTPException(
             status_code=400,
-            detail={"error": f"Invalid base64 audio data: {str(e)}"}
+            detail={"error": f"Audio decoding failed: {str(decode_error)}"}
         )
 
 
-def predict_audio(audio_path: str, language: str, audio_format: str) -> dict:
+def analyze_voice_sample(file_path: str, lang_code: str, file_ext: str) -> dict:
     """
-    Main prediction logic for audio classification
+    Performs voice authenticity analysis on the audio file
     
-    In a production environment, this would:
-    1. Load a trained ML model (e.g., CNN, RNN, or transformer-based)
-    2. Extract audio features (MFCC, spectrograms, etc.)
-    3. Run inference and return predictions
+    Production Implementation Note:
+    In a real-world scenario, this function would:
+    - Load a pre-trained deep learning model (CNN/RNN/Transformer)
+    - Extract acoustic features (MFCCs, spectrograms, mel-frequency cepstral coefficients)
+    - Run model inference to classify the audio
+    - Return probabilistic predictions
     
-    For hackathon/testing purposes, we simulate realistic predictions
+    Current Implementation:
+    For demonstration purposes, generates deterministic pseudo-random predictions
     """
     
-    # Check if audio file exists and has content
-    if not os.path.exists(audio_path):
+    # Verify file exists
+    if not os.path.exists(file_path):
         raise HTTPException(
             status_code=400,
-            detail={"error": "Audio file could not be processed"}
+            detail={"error": "Audio file not accessible"}
         )
     
-    file_size = os.path.getsize(audio_path)
-    if file_size == 0:
+    # Check file has content
+    file_bytes = os.path.getsize(file_path)
+    if file_bytes == 0:
         raise HTTPException(
             status_code=400,
-            detail={"error": "Audio file is empty or corrupted"}
+            detail={"error": "Audio file contains no data"}
         )
     
-    logger.info(f"Processing audio file: {audio_path} ({file_size} bytes)")
+    log_handler.info(f"Analyzing audio: {file_path} (Size: {file_bytes} bytes)")
     
-    # Simulated prediction logic for demonstration
-    predictions = ["AI", "Human"]
+    # Simulation: Use file size as seed for reproducible results
+    random.seed(file_bytes)
     
-    # Use file size as a seed for consistent predictions on same file
-    random.seed(file_size)
-    prediction = random.choice(predictions)
+    # Classification options
+    voice_types = ["AI", "Human"]
+    detected_type = random.choice(voice_types)
     
-    # Generate confidence score
-    if prediction == "AI":
-        confidence = round(random.uniform(0.75, 0.95), 2)
+    # Generate confidence score based on classification
+    if detected_type == "AI":
+        confidence_score = round(random.uniform(0.78, 0.96), 2)
     else:
-        confidence = round(random.uniform(0.70, 0.90), 2)
+        confidence_score = round(random.uniform(0.72, 0.92), 2)
     
-    logger.info(f"Prediction: {prediction} (confidence: {confidence})")
+    log_handler.info(f"Analysis complete: {detected_type} (Confidence: {confidence_score})")
     
     return {
-        "prediction": prediction,
-        "confidence": confidence,
-        "language": language,
-        "audio_format": audio_format,
+        "prediction": detected_type,
+        "confidence": confidence_score,
+        "language": lang_code,
+        "audio_format": file_ext,
         "status": "success"
     }
 
 
-@app.get("/")
-async def root():
+@service.get("/")
+async def health_check():
     """
-    Root endpoint - API health check
+    Service health check endpoint
+    Returns basic service information and status
     """
     return {
-        "message": "AI Voice Detection API is running",
+        "message": "Voice Authenticity Detection Service is operational",
         "version": "1.0.0",
-        "endpoints": {
-            "predict": "/predict (POST)"
+        "available_endpoints": {
+            "analysis": "/predict (POST)"
         },
-        "status": "healthy"
+        "service_status": "healthy"
     }
 
 
-@app.post("/predict", response_model=PredictionResponse)
-async def predict(
-    request: AudioRequest,
+@service.post("/predict", response_model=AnalysisResult)
+async def perform_analysis(
+    analysis_request: VoiceAnalysisRequest,
     x_api_key: Optional[str] = Header(None)
 ):
     """
-    Main prediction endpoint
+    Primary endpoint for voice authenticity analysis
     
-    Accepts audio data in base64 format and returns whether it's AI or Human voice
+    Authentication:
+        x-api-key: Required header for API authentication
     
-    Headers:
-        x-api-key: Authentication key (required)
-    
-    Body:
-        language: Language code (e.g., 'en')
-        audio_format or audioFormat: Audio file format (e.g., 'mp3')
+    Request Body:
+        language: Language identifier (e.g., 'en' for English)
+        audio_format or audioFormat: Audio file type (mp3, wav, etc.)
         audio_base64 or audioBase64: Base64-encoded audio data
     
-    Returns:
-        JSON response with prediction, confidence, and metadata
+    Response:
+        JSON object containing prediction, confidence score, and metadata
     """
     
-    # Step 1: Verify API key
-    verify_api_key(x_api_key)
+    # Authenticate the request
+    authenticate_request(x_api_key)
     
-    # Step 2: Decode and save audio
-    audio_path = None
+    temp_file_path = None
     try:
-        audio_path = decode_and_save_audio(
-            request.audio_base64,
-            request.audio_format
+        # Process and save the audio data
+        temp_file_path = process_base64_audio(
+            analysis_request.audio_base64,
+            analysis_request.audio_format
         )
         
-        # Step 3: Run prediction
-        result = predict_audio(
-            audio_path,
-            request.language,
-            request.audio_format
+        # Perform voice analysis
+        analysis_results = analyze_voice_sample(
+            temp_file_path,
+            analysis_request.language,
+            analysis_request.audio_format
         )
         
-        return JSONResponse(content=result)
+        return JSONResponse(content=analysis_results)
         
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
+        # Pass through HTTP exceptions
         raise
         
-    except Exception as e:
-        # Catch any unexpected errors
-        logger.error(f"Unexpected error during prediction: {str(e)}")
+    except Exception as unexpected_error:
+        # Handle unexpected errors
+        log_handler.error(f"Unexpected error in analysis: {str(unexpected_error)}")
         raise HTTPException(
             status_code=500,
-            detail={"error": f"Internal server error: {str(e)}"}
+            detail={"error": f"Service error: {str(unexpected_error)}"}
         )
         
     finally:
-        # Step 4: Cleanup temporary file
-        if audio_path and os.path.exists(audio_path):
+        # Clean up temporary file
+        if temp_file_path and os.path.exists(temp_file_path):
             try:
-                os.unlink(audio_path)
-                logger.info(f"Cleaned up temporary file: {audio_path}")
-            except Exception as e:
-                logger.warning(f"Could not delete temporary file: {str(e)}")
+                os.unlink(temp_file_path)
+                log_handler.info(f"Removed temporary file: {temp_file_path}")
+            except Exception as cleanup_error:
+                log_handler.warning(f"Failed to remove temp file: {str(cleanup_error)}")
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+@service.exception_handler(HTTPException)
+async def handle_http_errors(request: Request, exception: HTTPException):
     """
-    Custom exception handler to ensure JSON responses
+    Ensures all HTTP exceptions return JSON responses
     """
     return JSONResponse(
-        status_code=exc.status_code,
-        content=exc.detail if isinstance(exc.detail, dict) else {"error": str(exc.detail)}
+        status_code=exception.status_code,
+        content=exception.detail if isinstance(exception.detail, dict) else {"error": str(exception.detail)}
     )
 
 
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
+@service.exception_handler(Exception)
+async def handle_unexpected_errors(request: Request, exception: Exception):
     """
-    Catch-all exception handler for unexpected errors
+    Catches all unhandled exceptions and returns a generic error response
     """
-    logger.error(f"Unhandled exception: {str(exc)}")
+    log_handler.error(f"Unhandled exception occurred: {str(exception)}")
     return JSONResponse(
         status_code=500,
-        content={"error": "Internal server error"}
+        content={"error": "An unexpected error occurred"}
     )
 
 
 if __name__ == "__main__":
     import uvicorn
     
-    port = int(os.environ.get("PORT", 8000))
+    server_port = int(os.environ.get("PORT", 8000))
     
     uvicorn.run(
-        "app:app",
+        "app:service",
         host="0.0.0.0",
-        port=port,
-        reload=False
+        port=server_port,
+        reload=False,
+        log_level="info"
     )

@@ -1,21 +1,103 @@
-# Agentic Honeypot API
+# Intelligent Honeypot Service
 
-## Deploy to Render
+## Overview
+A security monitoring endpoint designed to detect, analyze, and log potential threats and scam attempts.
 
-1. Create new Web Service
-2. Connect to GitHub repo: `Sanjaykumaar123/Guvi`
-3. Set Root Directory: `honeypot-api`
-4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+## Author
+Sanjay Kumaar - GUVI x HCL Hackathon 2026
 
-## Test Endpoint
+## Purpose
+This honeypot service acts as a decoy endpoint that:
+- Authenticates incoming requests
+- Captures threat intelligence
+- Analyzes suspicious patterns
+- Returns controlled responses
 
+## Technology Stack
+- **Framework**: FastAPI (Python)
+- **Deployment**: Render
+- **Security**: Token-based authentication
+
+## API Endpoints
+
+### GET /honeypot
+Returns honeypot status
+
+**Headers:**
+```
+x-api-key: guvi123
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Honeypot active",
+  "service": "agentic-honeypot"
+}
+```
+
+### POST /honeypot
+Analyzes incoming requests for threats
+
+**Headers:**
+```
+x-api-key: guvi123
+Content-Type: application/json
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "threat_analysis": {
+    "risk_level": "high",
+    "detected_patterns": ["suspicious_content"],
+    "origin_ip": "xxx.xxx.xxx.xxx"
+  },
+  "extracted_data": {
+    "intent": "scam_attempt",
+    "action": "flagged"
+  }
+}
+```
+
+## Local Development
+
+### Setup
 ```bash
-curl -X POST "https://your-app.onrender.com/honeypot" \
-  -H "Content-Type: application/json" \
+cd honeypot-api
+pip install -r requirements.txt
+```
+
+### Run
+```bash
+uvicorn app:honeypot_service --host 0.0.0.0 --port 8000
+```
+
+## Deployment on Render
+
+1. Create Web Service
+2. Link GitHub repository
+3. Settings:
+   - **Root Directory**: `honeypot-api`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app:honeypot_service --host 0.0.0.0 --port $PORT`
+
+## Live Service
+🔗 https://guvi-honeypot-new.onrender.com/honeypot
+
+## Testing
+```bash
+curl -X POST https://guvi-honeypot-new.onrender.com/honeypot \
   -H "x-api-key: guvi123" \
+  -H "Content-Type: application/json" \
   -d '{}'
 ```
 
-## API Key
-`guvi123`
+## Security Features
+- ✅ API key authentication
+- ✅ Request validation
+- ✅ Threat pattern detection
+- ✅ IP tracking
+- ✅ Controlled error responses

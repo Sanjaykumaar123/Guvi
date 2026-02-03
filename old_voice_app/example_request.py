@@ -54,7 +54,7 @@ def test_api_request():
     
     # Step 3: Prepare request
     print("\n3. Preparing API request...")
-    url = "http://localhost:8000/predict"
+    url = "https://guvi-qigw.onrender.com/predict"
     headers = {
         "Content-Type": "application/json",
         "x-api-key": "guvi123"
