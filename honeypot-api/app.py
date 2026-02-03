@@ -57,7 +57,7 @@ async def service_status():
     }
 
 
-@honeypot_service.get("/honeypot")
+@app.get("/honeypot")
 async def honeypot_status_check(
     request: Request,
     x_api_key: Optional[str] = Header(None)
@@ -77,7 +77,7 @@ async def honeypot_status_check(
     )
 
 
-@honeypot_service.post("/honeypot")
+@app.post("/honeypot")
 async def analyze_threat(
     request: Request,
     x_api_key: Optional[str] = Header(None)
@@ -125,7 +125,7 @@ async def analyze_threat(
     )
 
 
-@honeypot_service.exception_handler(HTTPException)
+@app.exception_handler(HTTPException)
 async def handle_http_exceptions(request: Request, exc: HTTPException):
     """
     Custom handler for HTTP exceptions to ensure JSON responses
@@ -136,7 +136,7 @@ async def handle_http_exceptions(request: Request, exc: HTTPException):
     )
 
 
-@honeypot_service.exception_handler(Exception)
+@app.exception_handler(Exception)
 async def handle_general_exceptions(request: Request, exc: Exception):
     """
     Catch-all handler for unexpected errors
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     
     service_port = int(os.environ.get("PORT", 8000))
     uvicorn.run(
-        "app:honeypot_service",
+        "app:app",
         host="0.0.0.0",
         port=service_port,
         reload=False
