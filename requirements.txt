@@ -1,2 +1,3 @@
-starlette
+fastapi
 uvicorn
+pydantic
