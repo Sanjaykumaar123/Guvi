@@ -37,6 +37,12 @@ async def honeypot_endpoint(request):
         )
 
     # 3. Handle POST (Intelligence Extraction)
+    # Accept any body format - don't validate
+    try:
+        body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    except:
+        body = {}
+    
     client_ip = request.client.host if request.client else "unknown"
     
     return JSONResponse(
