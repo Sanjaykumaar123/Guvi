@@ -22,7 +22,7 @@ log_handler = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create FastAPI application instance
-service = FastAPI(
+app = FastAPI(
     title="Voice Authenticity Detector",
     description="Analyzes audio to distinguish between AI-synthesized and human voices",
     version="1.0.0",

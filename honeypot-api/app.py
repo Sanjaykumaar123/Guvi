@@ -13,7 +13,7 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
 # Initialize the honeypot application
-honeypot_service = FastAPI(
+app = FastAPI(
     title="Intelligent Honeypot Service",
     description="Security monitoring endpoint for threat detection",
     version="1.0.0"
@@ -45,7 +45,7 @@ def validate_security_token(x_api_key: Optional[str] = Header(None)) -> bool:
     return True
 
 
-@honeypot_service.get("/")
+@app.get("/")
 async def service_status():
     """
     Service health monitoring endpoint
