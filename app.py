@@ -143,11 +143,21 @@ async def honeypot_post(
     # Get client IP
     client_ip = request.client.host if request.client else "unknown"
     
-    # Try to read body but don't fail if it's invalid
+    # Read body - handle ANY format (JSON, malformed, empty, etc.)
+    body = {}
     try:
+        # Try to read as JSON first
         body = await request.json()
     except:
-        body = {}
+        # If JSON parsing fails, try reading raw body
+        try:
+            raw_body = await request.body()
+            # If there's content, note it but don't fail
+            if raw_body:
+                body = {"raw_content": "received"}
+        except:
+            # Even if body reading fails, continue
+            pass
     
     # Return threat analysis
     return JSONResponse(
