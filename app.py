@@ -4,8 +4,8 @@ from fastapi.responses import JSONResponse
 import os
 import json
 
-# Setup FastAPI with manual handling to avoid any validation errors
-app = FastAPI(title="GUVI Robust API", version="1.0.3")
+# Setup FastAPI 
+app = FastAPI(title="GUVI Robust API", version="1.0.4")
 
 # CORS: Full permissive mode
 app.add_middleware(
@@ -24,12 +24,10 @@ API_KEY_VALUE = "guvi123"
 
 def get_client_ip(headers, client):
     """Robust IP extraction logic."""
-    # Check Vercel/Render headers
     for h in ["x-forwarded-for", "x-real-ip"]:
         val = headers.get(h)
         if val:
             return val.split(",")[0].strip()
-    # Check client host
     if client and hasattr(client, "host") and client.host:
         return client.host
     return "unknown"
@@ -53,20 +51,16 @@ def honeypot_response(ip):
 
 @app.get("/")
 async def health():
-    return {"status": "success", "message": "API is online", "version": "1.0.3"}
+    return {"status": "success", "message": "API is online", "version": "1.0.4"}
 
-# PREDICT ENDPOINT
 @app.api_route("/predict", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def predict(request: Request):
-    # Handle CORS preflight
     if request.method == "OPTIONS":
         return Response(status_code=200)
 
-    # Enforce API Key
     if request.headers.get(API_KEY_HEADER) != API_KEY_VALUE:
         return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
 
-    # Default response for non-POST or empty POST
     res = {
         "status": "success",
         "prediction": "Unknown",
@@ -77,7 +71,6 @@ async def predict(request: Request):
 
     if request.method == "POST":
         try:
-            # We must be careful reading body - consume it to avoid hanging
             body_bytes = await request.body()
             if body_bytes:
                 data = json.loads(body_bytes)
@@ -89,43 +82,26 @@ async def predict(request: Request):
                     res["prediction"] = "Human"
                     res["confidence"] = 0.89
         except:
-            pass # Malformed JSON handled by fallback
-
+            pass
     return res
 
-# HONEYPOT ENDPOINT - The "Unbreakable" version
 @app.api_route("/honeypot", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 async def honeypot(request: Request):
-    """
-    Acts as a total decoy. Consumes any body and returns success.
-    Matches all methods, never validates, never crashes.
-    """
-    # 1. Handle CORS preflight explicitly
     if request.method == "OPTIONS":
         return Response(status_code=200)
 
-    # 2. CONSUME THE BODY. 
-    # This is critical. If we don't read the body, the tester might time out or see a broken connection.
     try:
-        # We read it but do nothing with it.
-        # Use a timeout or limit to be safe, but usually body() is fine.
-        _ = await request.body()
+        # Crucial: consume the body to prevent connection issues
+        await request.body()
     except:
         pass
 
-    # 3. Extract IP
     ip = get_client_ip(request.headers, request.client)
+    return JSONResponse(status_code=200, content=honeypot_response(ip))
 
-    # 4. Return the specific JSON success response
-    return JSONResponse(
-        status_code=200,
-        content=honeypot_response(ip)
-    )
-
-# --- ERROR HANDLERS ---
+# Safety net
 @app.exception_handler(Exception)
 async def catch_all(request: Request, exc: Exception):
-    """Final safety net."""
     path = request.url.path.lower()
     if "honeypot" in path:
         return JSONResponse(status_code=200, content=honeypot_response("unknown"))
