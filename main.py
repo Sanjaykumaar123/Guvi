@@ -1,13 +1,11 @@
 """
-AI-Generated Voice Detection API
-GUVI x HCL Hackathon Submission
-
-This API provides a simple endpoint to detect whether an audio sample
-is AI-generated or human-spoken. Built with FastAPI for production deployment.
+AI-Generated Voice Detection API & Honeypot
+GUVI x HCL Hackathon Submission - Unified API
 """
 
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 import base64
 import os
@@ -16,23 +14,31 @@ import random
 from typing import Optional, Dict, Any
 import logging
 
-# Configure logging for better debugging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="AI Voice Detection API",
-    description="Detects whether audio is AI-generated or human-spoken",
+    title="GUVI Hackathon - Unified API",
+    description="Combined Voice Detection and Honeypot API",
     version="1.0.0"
 )
 
-# API Key for authentication (as per GUVI requirements)
+# Add CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# API Key
 VALID_API_KEY = "guvi123"
 
 # Supported audio formats
 SUPPORTED_FORMATS = ["mp3", "wav", "ogg", "flac", "m4a"]
-
 
 class AudioRequest(BaseModel):
     """
@@ -70,16 +76,6 @@ class PredictionResponse(BaseModel):
     language: str
     audio_format: str
     status: str = "success"
-
-
-class HoneypotResponse(BaseModel):
-    """Standard response format for Honeypot"""
-    status: str
-    threat_analysis: Optional[Dict[str, Any]] = None
-    extracted_data: Optional[Dict[str, Any]] = None
-    message: Optional[str] = None
-    service: Optional[str] = None
-
 
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)) -> bool:
@@ -136,48 +132,23 @@ def decode_and_save_audio(audio_base64: str, audio_format: str) -> str:
 
 def predict_audio(audio_path: str, language: str, audio_format: str) -> dict:
     """
-    Main prediction logic for audio classification
-    
-    In a production environment, this would:
-    1. Load a trained ML model (e.g., CNN, RNN, or transformer-based)
-    2. Extract audio features (MFCC, spectrograms, etc.)
-    3. Run inference and return predictions
-    
-    For hackathon/testing purposes, we simulate realistic predictions
+    Simulated prediction logic for audio classification
     """
     
     # Check if audio file exists and has content
     if not os.path.exists(audio_path):
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Audio file could not be processed"}
-        )
+        raise HTTPException(status_code=400, detail={"error": "Audio file processing failed"})
     
     file_size = os.path.getsize(audio_path)
-    if file_size == 0:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Audio file is empty or corrupted"}
-        )
-    
     logger.info(f"Processing audio file: {audio_path} ({file_size} bytes)")
     
-    # TODO: Replace this section with actual ML model inference
-    # Example model loading (commented out for now):
-    # import torch
-    # model = torch.load('voice_detection_model.pth')
-    # features = extract_features(audio_path)
-    # prediction = model.predict(features)
-    
-    # Simulated prediction logic for demonstration
-    # This creates realistic-looking predictions for testing
+    # Simulated prediction logic
     predictions = ["AI", "Human"]
     
-    # Use file size as a seed for consistent predictions on same file
+    # Use file size as a seed for consistent predictions
     random.seed(file_size)
     prediction = random.choice(predictions)
     
-    # Generate confidence score (higher for AI, slightly lower for Human)
     if prediction == "AI":
         confidence = round(random.uniform(0.75, 0.95), 2)
     else:
@@ -200,14 +171,13 @@ async def root():
     Root endpoint - API health check
     """
     return {
-        "message": "AI Voice Detection API is running",
-        "version": "1.0.0",
+        "status": "healthy",
+        "service": "GUVI Hackathon - Unified API",
         "endpoints": {
-            "predict": "/predict (POST)",
-            "honeypot": "/honeypot (GET, POST)"
+            "voice_detection": "/predict",
+            "honeypot": "/honeypot"
         },
-
-        "status": "healthy"
+        "message": "API is running"
     }
 
 
@@ -218,25 +188,39 @@ async def predict(
 ):
     """
     Main prediction endpoint
+    """
+    # Step 1: Verify API key
+    verify_api_key(x_api_key)
     
-    Accepts audio data in base64 format and returns whether it's AI or Human voice
-    
-    Headers:
-        x-api-key: Authentication key (required)
-    
-
-    logger.info(f"Simulated prediction for language '{request.language}', format '{request.audio_format}': {prediction} (confidence: {confidence})")
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "prediction": prediction,
-            "confidence": confidence,
-            "language": request.language,
-            "audio_format": request.audio_format,
-            "status": "success"
-        }
-    )
+    # Step 2: Decode and save audio
+    audio_path = None
+    try:
+        audio_path = decode_and_save_audio(
+            request.audio_base64,
+            request.audio_format
+        )
+        
+        # Step 3: Run prediction
+        result = predict_audio(
+            audio_path,
+            request.language,
+            request.audio_format
+        )
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail={"error": f"Internal server error: {str(e)}"})
+    finally:
+        # Step 4: Cleanup
+        if audio_path and os.path.exists(audio_path):
+            try:
+                os.unlink(audio_path)
+            except Exception:
+                pass
 
 
 @app.api_route("/honeypot", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
@@ -255,13 +239,12 @@ async def honeypot_endpoint(request: Request):
     if request.method == "HEAD":
         return JSONResponse(
             status_code=200,
-            content={} # HEAD requests should have empty body
+            content={}
         )
 
     # 2. Verify API Key (Manual check from headers)
     x_api_key = request.headers.get("x-api-key")
     if not x_api_key or x_api_key.strip() != VALID_API_KEY:
-         # Return 401 for unauthorized access
          return JSONResponse(
             status_code=401,
             content={"error": "Unauthorized Access", "status": "failure"}
@@ -281,11 +264,11 @@ async def honeypot_endpoint(request: Request):
     # 4. Handle POST (and others) - Intelligence Extraction
     client_ip = request.client.host if request.client else "unknown"
     
-    # Read body safely (don't fail if empty or invalid JSON)
+    # Read body safely
     try:
-        body = await request.json()
+        await request.json()
     except Exception:
-        body = {}
+        pass 
     
     return JSONResponse(
         status_code=200,
@@ -306,10 +289,7 @@ async def honeypot_endpoint(request: Request):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """
-    Custom exception handler to ensure JSON responses
-    This prevents FastAPI from returning HTML error pages
-    """
+    """Ensure JSON responses for errors"""
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.detail if isinstance(exc.detail, dict) else {"error": str(exc.detail)}
@@ -318,9 +298,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """
-    Catch-all exception handler for unexpected errors
-    """
+    """Catch-all exception handler"""
     logger.error(f"Unhandled exception: {str(exc)}")
     return JSONResponse(
         status_code=500,
@@ -332,13 +310,7 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Use the PORT environment variable provided by Render/Railway
-    # Default to 8000 if running locally
     port = int(os.environ.get("PORT", 8000))
-    
-    # Run the server
-    # host 0.0.0.0 is required for deployment
-    # reload=False is recommended for production (it's much more stable)
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
