@@ -26,10 +26,6 @@
                 {
                     "key": "Expires",
                     "value": "0"
-                },
-                {
-                    "key": "Access-Control-Allow-Origin",
-                    "value": "*"
                 }
             ]
         }
