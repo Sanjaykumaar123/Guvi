@@ -16,40 +16,41 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "success", "info": "Honeypot API Standalone v1.1.0"}
+    return {"status": "success", "info": "Honeypot API Standalone v1.1.1"}
 
 @app.api_route(
     "/honeypot",
-    methods=["POST", "HEAD", "OPTIONS"]
+    methods=["GET", "POST", "HEAD", "OPTIONS"]
 )
 async def honeypot(
     request: Request,
     x_api_key: str = Header(None)
 ):
-    # 1️⃣ API key REQUIRED (GUVI checks this)
+    # API key REQUIRED
     if x_api_key != "guvi123":
         return JSONResponse(
             status_code=401,
             content={"error": "Unauthorized Access"}
         )
 
-    # 2️⃣ HEAD request must return 200 (NO BODY)
+    # HEAD → must return 200
     if request.method == "HEAD":
         return Response(status_code=200)
 
-    # 3️⃣ OPTIONS request must succeed
+    # OPTIONS → must return 200
     if request.method == "OPTIONS":
         return Response(status_code=200)
 
-    # 4️⃣ POST: accept EMPTY or INVALID JSON safely
-    try:
-        body = await request.json()
-        if not isinstance(body, dict):
+    # POST → tolerate empty / invalid JSON
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                body = {}
+        except:
             body = {}
-    except:
-        body = {}
 
-    # 5️⃣ Response structure EXACTLY as expected
+    # GET / POST → SAME response
     return {
         "status": "success",
         "threat_analysis": {

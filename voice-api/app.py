@@ -16,11 +16,11 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "success", "info": "Voice Detection API Standalone v1.1.0"}
+    return {"status": "success", "info": "Voice Detection API Standalone v1.1.1"}
 
 @app.api_route(
     "/predict",
-    methods=["POST", "HEAD", "OPTIONS"]
+    methods=["GET", "POST", "HEAD", "OPTIONS"]
 )
 async def predict(
     request: Request,
@@ -37,13 +37,14 @@ async def predict(
     if request.method in ["HEAD", "OPTIONS"]:
         return Response(status_code=200)
 
-    # 3️⃣ POST
-    try:
-        body = await request.json()
-        if not isinstance(body, dict):
+    # 3️⃣ POST / GET
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                body = {}
+        except:
             body = {}
-    except:
-        body = {}
 
     return {
         "status": "success",
