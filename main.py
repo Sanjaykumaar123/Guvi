@@ -25,14 +25,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# NOTE: CORS is handled manually in middleware below
+# We don't use CORSMiddleware because it runs after our custom middleware
 
 # API Key
 VALID_API_KEY = "guvi123"
@@ -271,8 +265,11 @@ async def honeypot_middleware(request: Request, call_next):
             headers=headers
         )
     
-    # For non-honeypot requests, continue normally
+    # For non-honeypot requests, continue normally and add CORS
     response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 
