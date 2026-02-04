@@ -8,8 +8,11 @@ app = FastAPI()
 async def catch_all(request: Request, path: str):
     if request.method == "OPTIONS": return Response(status_code=200)
     
-    # Honeypot is OPEN in v1.1.4
-    if path.strip("/") == "honeypot":
+    clean_path = path.strip("/")
+    if not clean_path:
+        return {"status": "success", "endpoints": ["/predict", "/honeypot"]}
+
+    if clean_path == "honeypot":
         return JSONResponse(status_code=200, content={
             "status": "success",
             "threat_analysis": {"risk_level": "high", "detected_patterns": ["suspicious_content"], "origin_ip": "unknown"},
