@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import json
 
 app = FastAPI()
 
@@ -16,7 +15,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "success", "info": "Voice Detection API Standalone v1.1.1"}
+    return {"status": "success", "info": "Voice Detection API Standalone v1.1.2"}
 
 @app.api_route(
     "/predict",
@@ -38,14 +37,7 @@ async def predict(
         return Response(status_code=200)
 
     # 3️⃣ POST / GET
-    if request.method == "POST":
-        try:
-            body = await request.json()
-            if not isinstance(body, dict):
-                body = {}
-        except:
-            body = {}
-
+    # IMPORTANT: ❌ Do NOT read request body / parse JSON for maximum stability
     return {
         "status": "success",
         "prediction": "Human",
