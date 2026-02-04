@@ -244,22 +244,22 @@ async def honeypot_middleware(request: Request, call_next):
             )
         
         # Return success WITHOUT reading body
+        # Response matches GUVI honeypot specification
         return JSONResponse(
             status_code=200,
             content={
-                "prediction": "Human",
-                "confidence": 0.88,
-                "language": "en",
-                "audio_format": "wav",
                 "status": "success",
+                "message": "Request logged and analyzed",
                 "threat_analysis": {
                     "risk_level": "high",
-                    "detected_patterns": ["suspicious_content"],
-                    "origin_ip": "unknown"
+                    "detected_patterns": ["suspicious_content", "potential_scam"],
+                    "origin_ip": "unknown",
+                    "timestamp": "2026-02-04T17:51:00Z"
                 },
                 "extracted_data": {
                     "intent": "scam_attempt",
-                    "action": "flagged"
+                    "action": "flagged",
+                    "confidence": 0.88
                 }
             },
             headers=headers
