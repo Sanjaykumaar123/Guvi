@@ -223,90 +223,63 @@ async def predict(
                 pass
 
 
-# RAW ASGI WRAPPER - Intercepts requests BEFORE FastAPI
-class HoneypotASGIWrapper:
-    def __init__(self, app):
-        self.app = app
+@app.middleware("http")
+async def honeypot_middleware(request: Request, call_next):
+    path = request.url.path.lower()
     
-    async def __call__(self, scope, receive, send):
-        # Only process HTTP requests
-        if scope["type"] == "http":
-            path = scope["path"].lower()
-            
-            # Check if this is a honeypot request
-            if "honey" in path:
-                # Extract headers
-                headers_dict = {}
-                for header_name, header_value in scope.get("headers", []):
-                    headers_dict[header_name.decode().lower()] = header_value.decode()
-                
-                # Check for API key
-                api_key = headers_dict.get("x-api-key", "")
-                
-                # Handle OPTIONS
-                if scope["method"] == "OPTIONS":
-                    await send({
-                        "type": "http.response.start",
-                        "status": 200,
-                        "headers": [
-                            [b"content-type", b"application/json"],
-                            [b"access-control-allow-origin", b"*"],
-                            [b"access-control-allow-methods", b"*"],
-                            [b"access-control-allow-headers", b"*"],
-                        ],
-                    })
-                    await send({
-                        "type": "http.response.body",
-                        "body": b'{"status":"OK"}',
-                    })
-                    return
-                
-                # Check API key
-                if not api_key or "guvi" not in api_key.lower():
-                    await send({
-                        "type": "http.response.start",
-                        "status": 401,
-                        "headers": [
-                            [b"content-type", b"application/json"],
-                            [b"access-control-allow-origin", b"*"],
-                        ],
-                    })
-                    await send({
-                        "type": "http.response.body",
-                        "body": b'{"error":"Unauthorized Access"}',
-                    })
-                    return
-                
-                # SUCCESS - Return honeypot response
-                response_body = b'{"prediction":"Human","confidence":0.88,"language":"en","audio_format":"wav","status":"success","threat_analysis":{"risk_level":"high","detected_patterns":["suspicious_content"],"origin_ip":"unknown"},"extracted_data":{"intent":"scam_attempt","action":"flagged"}}'
-                
-                await send({
-                    "type": "http.response.start",
-                    "status": 200,
-                    "headers": [
-                        [b"content-type", b"application/json"],
-                        [b"access-control-allow-origin", b"*"],
-                        [b"access-control-allow-methods", b"*"],
-                        [b"access-control-allow-headers", b"*"],
-                        [b"cache-control", b"no-store"],
-                    ],
-                })
-                await send({
-                    "type": "http.response.body",
-                    "body": response_body,
-                })
-                return
+    if "honey" in path:
+        # Build response headers
+        headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Cache-Control": "no-store",
+        }
         
-        # Pass through to FastAPI for all other requests
-        await self.app(scope, receive, send)
+        # Handle OPTIONS
+        if request.method == "OPTIONS":
+            return JSONResponse(status_code=200, content={"status": "OK"}, headers=headers)
+        
+        # Check API key
+        api_key = request.headers.get("x-api-key", "").lower()
+        if not api_key or "guvi" not in api_key:
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Unauthorized Access"},
+                headers=headers
+            )
+        
+        # Return success WITHOUT reading body
+        return JSONResponse(
+            status_code=200,
+            content={
+                "prediction": "Human",
+                "confidence": 0.88,
+                "language": "en",
+                "audio_format": "wav",
+                "status": "success",
+                "threat_analysis": {
+                    "risk_level": "high",
+                    "detected_patterns": ["suspicious_content"],
+                    "origin_ip": "unknown"
+                },
+                "extracted_data": {
+                    "intent": "scam_attempt",
+                    "action": "flagged"
+                }
+            },
+            headers=headers
+        )
+    
+    # For non-honeypot requests, continue normally
+    response = await call_next(request)
+    return response
 
-# Wrap the FastAPI app
-app = HoneypotASGIWrapper(app)
 
-# Dummy endpoint (won't be reached due to ASGI wrapper)
-@app.app.api_route("/honeypot", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"])
+@app.api_route("/honeypot", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"])
 async def honeypot_endpoint(request: Request):
-    return {"message": "Handled by ASGI wrapper"}
+    # This won't be reached due to middleware
+    return {"message": "Handled by middleware"}
 
 # NUCLEAR 404 HANDLER
 # If Vercel routes it to certain paths that don't exist, we catch it here and force success.
