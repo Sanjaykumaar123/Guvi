@@ -286,12 +286,7 @@ async def honeypot_middleware(request: Request, call_next):
     
     # Normal flow for other endpoints
     response = await call_next(request)
-    # Add CORS to normal responses too
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
-    
-    # For non-honeypot requests, continue normally and add CORS
-    response = await call_next(request)
+    # Add CORS to normal responses
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
