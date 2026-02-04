@@ -35,7 +35,7 @@ On the GUVI Honeypot Tester page, enter:
 
 **Endpoint URL:**
 ```
-https://guvi-qigw.onrender.com/honeypot
+https://guvi-unified-api.onrender.com/honeypot
 ```
 
 **API Key:**
@@ -132,12 +132,12 @@ py test_honeypot.py
 ### Quick cURL Test:
 ```bash
 # With API key (should succeed)
-curl -X POST "https://guvi-qigw.onrender.com/honeypot" \
+curl -X POST "https://guvi-unified-api.onrender.com/honeypot" \
   -H "Content-Type: application/json" \
   -H "x-api-key: guvi123"
 
 # Without API key (should fail with 401)
-curl -X POST "https://guvi-qigw.onrender.com/honeypot" \
+curl -X POST "https://guvi-unified-api.onrender.com/honeypot" \
   -H "Content-Type: application/json"
 ```
 
@@ -225,7 +225,7 @@ This solution demonstrates:
 
 **Honeypot Endpoint URL:**
 ```
-https://guvi-qigw.onrender.com/honeypot
+https://guvi-unified-api.onrender.com/honeypot
 ```
 
 **API Key:**

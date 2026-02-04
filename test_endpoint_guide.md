@@ -2,7 +2,7 @@
 
 ## Your Deployment Details
 
-**Deployed URL:** `https://guvi-qigw.onrender.com`
+**Deployed URL:** `https://guvi-unified-api.onrender.com`
 
 ---
 
@@ -22,7 +22,7 @@ guvi123
 
 ### 3. **Endpoint URL** ✅
 ```
-https://guvi-qigw.onrender.com/predict
+https://guvi-unified-api.onrender.com/predict
 ```
 
 ### 4. **Request Body** ✅
@@ -88,7 +88,7 @@ with open(filename, "rb") as f:
 ## 🧪 Test with cURL (Alternative)
 
 ```bash
-curl -X POST "https://guvi-qigw.onrender.com/predict" \
+curl -X POST "https://guvi-unified-api.onrender.com/predict" \
   -H "Content-Type: application/json" \
   -H "x-api-key: guvi123" \
   -d '{
@@ -143,7 +143,7 @@ Or:
 
 ### If you get timeout:
 - Wait 1-2 minutes for Render to wake up the service
-- Try the health check first: `https://guvi-qigw.onrender.com/`
+- Try the health check first: `https://guvi-unified-api.onrender.com/`
 
 ### If you get "Invalid base64" error:
 - Make sure the base64 string has no line breaks or spaces
@@ -154,7 +154,7 @@ Or:
 ## 🎉 Testing Steps
 
 1. **Wake up the service** (optional but recommended):
-   - Visit: `https://guvi-qigw.onrender.com/` in your browser
+   - Visit: `https://guvi-unified-api.onrender.com/` in your browser
    - Wait for response (may take 30-60 seconds first time)
 
 2. **Fill the GUVI form** with the values above

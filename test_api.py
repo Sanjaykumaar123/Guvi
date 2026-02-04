@@ -37,7 +37,7 @@ def generate_sample_audio(filename="test_audio.wav", duration=2, frequency=440):
     return filename
 
 
-def test_api(api_url="http://localhost:8000", audio_file="test_audio.wav"):
+def test_api(api_url="https://guvi-unified-api.onrender.com", audio_file="test_audio.wav"):
     """
     Test the AI Voice Detection API with various scenarios
     """
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     import sys
     
     # Check if API URL is provided as argument
-    api_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    api_url = sys.argv[1] if len(sys.argv) > 1 else "https://guvi-unified-api.onrender.com"
     
     print(f"\n🎯 Testing API at: {api_url}")
     print("   Make sure the API server is running!\n")

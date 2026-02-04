@@ -1,10 +1,10 @@
 import requests
 import json
 
-URL = "https://guvi-qigw.onrender.com/honeypot"
+URL = "https://guvi-unified-api.onrender.com/honeypot"
 HEADERS = {"x-api-key": "guvi123", "Content-Type": "application/json"}
 
-print("🔍 DIAGNOSTIC TEST FOR GUVI HONEYPOT")
+print("DIAGNOSTIC TEST FOR GUVI HONEYPOT")
 print("="*60)
 
 # Test 1: POST with JSON body (Simulating 'Intelligence' request)

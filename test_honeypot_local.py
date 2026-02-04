@@ -10,8 +10,9 @@ print("="*60)
 
 # Start the server in background
 print("\n1. Starting server...")
+import sys
 proc = subprocess.Popen(
-    ["uvicorn", "honeypot-api.app:app", "--host", "127.0.0.1", "--port", "8001"],
+    [sys.executable, "-m", "uvicorn", "honeypot-api.app:app", "--host", "127.0.0.1", "--port", "8001"],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )
@@ -37,11 +38,11 @@ try:
     print(f"   Response: {r.json()}")
     
     print("\n" + "="*60)
-    print("✅ All tests passed! The honeypot app works correctly.")
+    print("All tests passed! The honeypot app works correctly.")
     print("="*60)
     
 except Exception as e:
-    print(f"\n❌ Error: {e}")
+    print(f"\nError: {e}")
     
 finally:
     # Stop the server
