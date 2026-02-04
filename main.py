@@ -13,7 +13,7 @@ import base64
 import os
 import tempfile
 import random
-from typing import Optional
+from typing import Optional, Dict, Any
 import logging
 
 # Configure logging for better debugging
@@ -70,6 +70,16 @@ class PredictionResponse(BaseModel):
     language: str
     audio_format: str
     status: str = "success"
+
+
+class HoneypotResponse(BaseModel):
+    """Standard response format for Honeypot"""
+    status: str
+    threat_analysis: Optional[Dict[str, Any]] = None
+    extracted_data: Optional[Dict[str, Any]] = None
+    message: Optional[str] = None
+    service: Optional[str] = None
+
 
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)) -> bool:
@@ -193,8 +203,10 @@ async def root():
         "message": "AI Voice Detection API is running",
         "version": "1.0.0",
         "endpoints": {
-            "predict": "/predict (POST)"
+            "predict": "/predict (POST)",
+            "honeypot": "/honeypot (GET, POST)"
         },
+
         "status": "healthy"
     }
 
@@ -261,6 +273,59 @@ async def predict(
                 logger.info(f"Cleaned up temporary file: {audio_path}")
             except Exception as e:
                 logger.warning(f"Could not delete temporary file: {str(e)}")
+
+
+@app.get("/honeypot")
+async def honeypot_get(
+    request: Request,
+    x_api_key: Optional[str] = Header(None)
+):
+    """GET endpoint for honeypot"""
+    verify_api_key(x_api_key)
+    
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Honeypot active",
+            "service": "agentic-honeypot"
+        }
+    )
+
+
+@app.post("/honeypot")
+async def honeypot_post(
+    request: Request,
+    x_api_key: Optional[str] = Header(None)
+):
+    """POST endpoint for honeypot - accepts any body"""
+    verify_api_key(x_api_key)
+    
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Try to read body but don't fail if it's invalid
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    # Return threat analysis
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "threat_analysis": {
+                "risk_level": "high",
+                "detected_patterns": ["suspicious_content"],
+                "origin_ip": client_ip
+            },
+            "extracted_data": {
+                "intent": "scam_attempt",
+                "action": "flagged"
+            }
+        }
+    )
 
 
 @app.exception_handler(HTTPException)
